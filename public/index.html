@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buffer Demo - Improved</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .alert-warning {
+            background: rgba(255, 152, 0, 0.3);
+            border-left: 5px solid #ff9800;
+        }
+
+        .alert-info {
+            background: rgba(33, 150, 243, 0.3);
+            border-left: 5px solid #2196F3;
+        }
+
+        .alert-success {
+            background: rgba(76, 175, 80, 0.3);
+            border-left: 5px solid #4CAF50;
+        }
+
+        .control-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .control-section {
+            margin-bottom: 20px;
+        }
+
+        .control-section h3 {
+            margin-bottom: 10px;
+            color: #ffd700;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 200px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #45a049;
+        }
+
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #ff9800;
+            color: white;
+        }
+
+        .comparison-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .player-box {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .player-box.problem {
+            border: 3px solid #f44336;
+        }
+
+        .player-box.solution {
+            border: 3px solid #4CAF50;
+        }
+
+        .player-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .player-header h2 {
+            margin: 0;
+        }
+
+        .status-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .status-problem {
+            background: #f44336;
+        }
+
+        .status-solution {
+            background: #4CAF50;
+        }
+
+        video {
+            width: 100%;
+            height: auto;
+            border-radius: 10px;
+            background: #000;
+            display: block;
+            min-height: 300px;
+        }
+
+        .metrics {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .metric-label {
+            color: #aaa;
+        }
+
+        .metric-value {
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .buffer-visual {
+            margin-top: 10px;
+            height: 30px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 5px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .buffer-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        @media (max-width: 1200px) {
+            .comparison-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, .3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🎥 Playback Buffer Demo</h1>
+
+        <div class="alert alert-warning" id="warningAlert">
+            ⚠️ <strong>Setup Required:</strong>
+            <ol style="margin: 10px 0 0 20px;">
+                <li>OBS must be streaming to: <code>rtmp://localhost:1935/live</code> with key <code>demo</code></li>
+                <li>Wait 15 seconds after starting OBS</li>
+                <li>Check <a href="http://localhost:8000/live/demo/index.m3u8" target="_blank"
+                        style="color: #ffd700;">http://localhost:8000/live/demo/index.m3u8</a> works</li>
+            </ol>
+        </div>
+
+        <div class="alert alert-info" id="statusAlert" style="display: none;">
+            <span class="loading-spinner"></span> Checking stream availability...
+        </div>
+
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <div class="control-section">
+                <h3>🎬 Stream Control</h3>
+                <div class="control-row">
+                    <button class="btn-primary" onclick="checkAndLoadStreams()">🔄 Check & Load Streams</button>
+                    <button class="btn-warning" onclick="location.reload()">↻ Refresh Page</button>
+                    <button class="btn-primary"
+                        onclick="window.open('http://localhost:8000/live/demo/index.m3u8', '_blank')">🔗 Test Stream
+                        URL</button>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h3>🌐 Network Simulator</h3>
+                <div class="control-row">
+                    <label>
+                        <span>Packet Loss:</span>
+                        <input type="range" id="packetLoss" min="0" max="50" value="0" step="5">
+                        <span id="packetLossValue">0%</span>
+                    </label>
+                </div>
+                <div class="control-row">
+                    <label>
+                        <span>Latency:</span>
+                        <input type="range" id="latency" min="0" max="2000" value="0" step="100">
+                        <span id="latencyValue">0ms</span>
+                    </label>
+                </div>
+                <div class="control-row">
+                    <button class="btn-danger" onclick="enableNetworkProblems()">🔥 Enable Network Problems</button>
+                    <button class="btn-primary" onclick="disableNetworkProblems()">✅ Disable Problems</button>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h3>⚙️ Buffer Settings</h3>
+                <div class="control-row">
+                    <label>
+                        <span>Buffer Size:</span>
+                        <input type="range" id="bufferSize" min="2" max="10" value="4" step="0.5">
+                        <span id="bufferSizeValue">4 seconds</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Video Comparison -->
+        <div class="comparison-container">
+            <!-- WITHOUT BUFFER -->
+            <div class="player-box problem">
+                <div class="player-header">
+                    <h2>❌ WITHOUT Buffer</h2>
+                    <span class="status-badge status-problem">PROBLEM</span>
+                </div>
+                <video id="videoNormal" controls></video>
+                <div class="metrics">
+                    <div class="metric-row">
+                        <span class="metric-label">Status:</span>
+                        <span class="metric-value" id="statusNormal">Not loaded</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Buffered:</span>
+                        <span class="metric-value" id="bufferedNormal">0s</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Stalls:</span>
+                        <span class="metric-value" id="stallsNormal">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WITH BUFFER -->
+            <div class="player-box solution">
+                <div class="player-header">
+                    <h2>✅ WITH Buffer</h2>
+                    <span class="status-badge status-solution">SOLUTION</span>
+                </div>
+                <video id="videoBuffered" controls></video>
+                <div class="metrics">
+                    <div class="metric-row">
+                        <span class="metric-label">Status:</span>
+                        <span class="metric-value" id="statusBuffered">Not loaded</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Buffer Fill:</span>
+                        <span class="metric-value" id="bufferFill">0%</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Buffer Time:</span>
+                        <span class="metric-value" id="bufferTime">0.0s</span>
+                    </div>
+                    <div class="buffer-visual">
+                        <div class="buffer-fill" id="bufferBar" style="width: 0%">0%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STREAM_URL = 'http://localhost:8000/live/demo/index.m3u8';
+        let hlsNormal = null;
+        let hlsBuffered = null;
+        let bufferSize = 4;
+        let isBufferReady = false;
+        let metricsNormal = { stalls: 0 };
+        let networkProblemsEnabled = false;
+        let metricsInterval = null;
+
+        // Update UI controls
+        document.getElementById('packetLoss').addEventListener('input', (e) => {
+            document.getElementById('packetLossValue').textContent = e.target.value + '%';
+        });
+
+        document.getElementById('latency').addEventListener('input', (e) => {
+            document.getElementById('latencyValue').textContent = e.target.value + 'ms';
+        });
+
+        document.getElementById('bufferSize').addEventListener('input', (e) => {
+            bufferSize = parseFloat(e.target.value);
+            document.getElementById('bufferSizeValue').textContent = bufferSize + ' seconds';
+        });
+
+        function enableNetworkProblems() {
+            networkProblemsEnabled = true;
+
+            // Make the normal player more aggressive with small buffer
+            if (hlsNormal) {
+                hlsNormal.config.maxBufferLength = 0.5;
+                hlsNormal.config.maxMaxBufferLength = 1;
+                hlsNormal.config.maxBufferSize = 0.5 * 1000 * 1000;
+            }
+
+            // Simulate intermittent network hiccups
+            startNetworkInterruptions();
+
+            const packetLoss = document.getElementById('packetLoss').value;
+            const latency = document.getElementById('latency').value;
+            alert(`🔥 Network simulation enabled!\n\nThe LEFT video will pause randomly.\nThe RIGHT video will stay smooth.\n\nWatch for 30-60 seconds to see the difference!`);
+        }
+
+        let interruptionInterval = null;
+
+        function startNetworkInterruptions() {
+            if (interruptionInterval) {
+                clearInterval(interruptionInterval);
+            }
+
+            // Randomly pause/resume the normal video to simulate network hiccups
+            interruptionInterval = setInterval(() => {
+                const videoNormal = document.getElementById('videoNormal');
+
+                if (videoNormal && !videoNormal.paused && Math.random() < 0.4) {
+                    // Simulate network stall
+                    const originalTime = videoNormal.currentTime;
+                    videoNormal.pause();
+                    metricsNormal.stalls++;
+                    document.getElementById('statusNormal').textContent = '⏸️ Network stall...';
+
+                    // Resume after random delay (100-800ms)
+                    const delay = 100 + Math.random() * 700;
+                    setTimeout(() => {
+                        videoNormal.currentTime = originalTime;
+                        videoNormal.play().then(() => {
+                            document.getElementById('statusNormal').textContent = '▶️ Playing';
+                        }).catch(() => { });
+                    }, delay);
+                }
+            }, 2000); // Check every 2 seconds
+        }
+
+        function disableNetworkProblems() {
+            networkProblemsEnabled = false;
+            if (interruptionInterval) {
+                clearInterval(interruptionInterval);
+                interruptionInterval = null;
+            }
+            alert('✅ Network simulation disabled');
+        }
+
+        // Check if stream is available
+        async function checkStreamAvailability() {
+            const statusAlert = document.getElementById('statusAlert');
+            const warningAlert = document.getElementById('warningAlert');
+
+            statusAlert.style.display = 'block';
+            statusAlert.innerHTML = '<span class="loading-spinner"></span> Checking stream availability...';
+
+            try {
+                const response = await fetch(STREAM_URL);
+
+                if (response.ok) {
+                    const text = await response.text();
+
+                    if (text.includes('#EXTM3U')) {
+                        statusAlert.className = 'alert alert-success';
+                        statusAlert.innerHTML = '✅ <strong>Stream found!</strong> Loading players...';
+                        warningAlert.style.display = 'none';
+                        return true;
+                    } else {
+                        throw new Error('Invalid playlist format');
+                    }
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                statusAlert.className = 'alert alert-warning';
+                statusAlert.innerHTML = `
+          ❌ <strong>Stream not found!</strong><br>
+          Error: ${error.message}<br><br>
+          <strong>Troubleshooting:</strong><br>
+          1. Is OBS streaming? (Check for "LIVE" indicator)<br>
+          2. Wait 15-20 seconds after starting OBS<br>
+          3. Check server console for: <code>[transStart] FFMPEG TRANSCODING STARTED!</code><br>
+          4. Try opening: <a href="${STREAM_URL}" target="_blank" style="color: #ffd700;">${STREAM_URL}</a>
+        `;
+                return false;
+            }
+        }
+
+        async function checkAndLoadStreams() {
+            const isAvailable = await checkStreamAvailability();
+
+            if (isAvailable) {
+                setTimeout(() => {
+                    loadStreams();
+                }, 1000);
+            }
+        }
+
+        function loadStreams() {
+            console.log('Loading streams...');
+            loadNormalPlayer(STREAM_URL);
+            loadBufferedPlayer(STREAM_URL);
+            startMetricsUpdate();
+        }
+
+        function loadNormalPlayer(url) {
+            const video = document.getElementById('videoNormal');
+
+            document.getElementById('statusNormal').textContent = 'Loading...';
+
+            if (Hls.isSupported()) {
+                if (hlsNormal) {
+                    hlsNormal.destroy();
+                }
+
+                hlsNormal = new Hls({
+                    maxBufferLength: 1,
+                    maxMaxBufferLength: 2,
+                    enableWorker: true,
+                    liveSyncDuration: 3,        // Stay 3 seconds behind live edge
+                    liveMaxLatencyDuration: 5   // Maximum acceptable latency
+                });
+
+                hlsNormal.loadSource(url);
+                hlsNormal.attachMedia(video);
+
+                hlsNormal.on(Hls.Events.MANIFEST_PARSED, () => {
+                    console.log('Normal player: Manifest parsed');
+                    document.getElementById('statusNormal').textContent = '▶️ Ready';
+                    video.play().catch(e => {
+                        document.getElementById('statusNormal').textContent = '⏸️ Click to play';
+                    });
+                });
+
+                hlsNormal.on(Hls.Events.ERROR, (event, data) => {
+                    console.error('Normal player error:', data);
+                    if (data.fatal) {
+                        document.getElementById('statusNormal').textContent = '❌ Error: ' + data.type;
+                    }
+                });
+
+                video.addEventListener('waiting', () => {
+                    metricsNormal.stalls++;
+                    document.getElementById('statusNormal').textContent = '⏸️ Stalling...';
+                });
+
+                video.addEventListener('playing', () => {
+                    document.getElementById('statusNormal').textContent = '▶️ Playing';
+                });
+
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = url;
+                video.addEventListener('loadedmetadata', () => {
+                    video.play();
+                });
+            } else {
+                document.getElementById('statusNormal').textContent = '❌ HLS not supported';
+            }
+        }
+
+        function loadBufferedPlayer(url) {
+            const video = document.getElementById('videoBuffered');
+
+            document.getElementById('statusBuffered').textContent = 'Loading...';
+            isBufferReady = false;
+
+            if (Hls.isSupported()) {
+                if (hlsBuffered) {
+                    hlsBuffered.destroy();
+                }
+
+                hlsBuffered = new Hls({
+                    maxBufferLength: 30,
+                    maxMaxBufferLength: 60,
+                    enableWorker: true,
+                });
+
+                hlsBuffered.loadSource(url);
+                hlsBuffered.attachMedia(video);
+
+                hlsBuffered.on(Hls.Events.MANIFEST_PARSED, () => {
+                    console.log('Buffered player: Manifest parsed');
+                    document.getElementById('statusBuffered').textContent = '📊 Building buffer...';
+                    video.pause();
+
+                    const checkBuffer = setInterval(() => {
+                        const buffered = video.buffered;
+                        if (buffered.length > 0) {
+                            const bufferEnd = buffered.end(buffered.length - 1);
+                            const bufferAmount = bufferEnd - video.currentTime;
+
+                            const fillPercentage = Math.min(100, (bufferAmount / bufferSize) * 100);
+                            updateBufferVisual(fillPercentage, bufferAmount);
+
+                            if (bufferAmount >= bufferSize && !isBufferReady) {
+                                isBufferReady = true;
+                                clearInterval(checkBuffer);
+                                document.getElementById('statusBuffered').textContent = '✅ Buffer ready!';
+
+                                setTimeout(() => {
+                                    video.play().then(() => {
+                                        document.getElementById('statusBuffered').textContent = '▶️ Playing (buffered)';
+                                    }).catch(e => {
+                                        document.getElementById('statusBuffered').textContent = '⏸️ Click to play';
+                                    });
+                                }, 500);
+                            }
+                        }
+                    }, 100);
+                });
+
+                hlsBuffered.on(Hls.Events.ERROR, (event, data) => {
+                    console.log('Buffered player error (handled):', data.type);
+                    if (data.fatal) {
+                        document.getElementById('statusBuffered').textContent = '❌ Error: ' + data.type;
+                    }
+                });
+
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = url;
+                video.addEventListener('loadedmetadata', () => {
+                    setTimeout(() => video.play(), bufferSize * 1000);
+                });
+            } else {
+                document.getElementById('statusBuffered').textContent = '❌ HLS not supported';
+            }
+        }
+
+        function updateBufferVisual(percentage, seconds) {
+            const bar = document.getElementById('bufferBar');
+            const percentText = Math.round(percentage) + '%';
+
+            bar.style.width = percentage + '%';
+            bar.textContent = percentText;
+
+            document.getElementById('bufferFill').textContent = percentText;
+            document.getElementById('bufferTime').textContent = seconds.toFixed(1) + 's';
+        }
+
+        function startMetricsUpdate() {
+            if (metricsInterval) {
+                clearInterval(metricsInterval);
+            }
+
+            metricsInterval = setInterval(() => {
+                // Normal player metrics
+                const videoNormal = document.getElementById('videoNormal');
+                if (videoNormal.buffered.length > 0) {
+                    const buffered = videoNormal.buffered.end(0) - videoNormal.currentTime;
+                    document.getElementById('bufferedNormal').textContent = buffered.toFixed(1) + 's';
+                }
+                document.getElementById('stallsNormal').textContent = metricsNormal.stalls;
+
+                // Buffered player metrics  
+                const videoBuffered = document.getElementById('videoBuffered');
+                if (videoBuffered.buffered.length > 0 && isBufferReady) {
+                    const buffered = videoBuffered.buffered.end(0) - videoBuffered.currentTime;
+                    updateBufferVisual((buffered / bufferSize) * 100, buffered);
+                }
+            }, 500);
+        }
+
+        // Auto-check on load
+        console.log('🎥 Buffer Demo Ready!');
+        console.log('Checking stream availability...');
+        setTimeout(() => {
+            checkAndLoadStreams();
+        }, 1000);
+    </script>
+</body>
+
+</html>
